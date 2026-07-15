@@ -16,18 +16,28 @@ public final class OptionCalculator {
 
     public OptionSummary summarize(OptionInput input) {
         BigDecimal controlledShares = BigDecimal.valueOf(input.controlledShares());
-        BigDecimal premiumTotal = input.unitPremium().multiply(controlledShares);
+        BigDecimal unitPremium = input.purchasePremium();
+        BigDecimal premiumTotal = unitPremium.multiply(controlledShares);
         BigDecimal totalCost = premiumTotal.add(input.commissions());
+
+        BigDecimal spreadPerShare = input.ask().subtract(input.bid());
+        BigDecimal spreadTotal = spreadPerShare.multiply(controlledShares);
+        BigDecimal midpoint = input.ask().add(input.bid())
+                .divide(BigDecimal.valueOf(2), SCALE, RoundingMode.HALF_UP);
+        BigDecimal spreadPercent = midpoint.signum() == 0
+                ? BigDecimal.ZERO
+                : spreadPerShare.divide(midpoint, SCALE, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal.valueOf(100));
 
         BigDecimal commissionPerShare = input.commissions()
                 .divide(controlledShares, SCALE, RoundingMode.HALF_UP);
 
         BigDecimal breakEven = switch (input.type()) {
             case CALL -> input.strike()
-                    .add(input.unitPremium())
+                    .add(unitPremium)
                     .add(commissionPerShare);
             case PUT -> input.strike()
-                    .subtract(input.unitPremium())
+                    .subtract(unitPremium)
                     .subtract(commissionPerShare);
         };
 
@@ -37,8 +47,12 @@ public final class OptionCalculator {
                 .multiply(BigDecimal.valueOf(100));
 
         return new OptionSummary(
+                price(unitPremium),
                 money(premiumTotal),
                 money(totalCost),
+                price(spreadPerShare),
+                money(spreadTotal),
+                percent(spreadPercent),
                 price(breakEven),
                 money(totalCost),
                 input.controlledShares(),
@@ -68,7 +82,7 @@ public final class OptionCalculator {
 
         BigDecimal controlledShares = BigDecimal.valueOf(input.controlledShares());
         BigDecimal optionValueTotal = intrinsicPerShare.multiply(controlledShares);
-        BigDecimal premiumTotal = input.unitPremium().multiply(controlledShares);
+        BigDecimal premiumTotal = input.purchasePremium().multiply(controlledShares);
 
         BigDecimal grossProfitLoss = optionValueTotal.subtract(premiumTotal);
         BigDecimal netProfitLoss = grossProfitLoss.subtract(input.commissions());

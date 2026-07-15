@@ -6,7 +6,7 @@
 
     <groupId>it.lucamezzolla</groupId>
     <artifactId>option-payoff-calculator</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
     <name>Option Payoff Calculator</name>
     <description>Calcolatore didattico Swing per opzioni Call e Put acquistate</description>
 

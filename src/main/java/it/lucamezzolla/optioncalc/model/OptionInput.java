@@ -8,7 +8,8 @@ public record OptionInput(
         OptionType type,
         BigDecimal currentUnderlyingPrice,
         BigDecimal strike,
-        BigDecimal unitPremium,
+        BigDecimal bid,
+        BigDecimal ask,
         int contracts,
         int multiplier,
         BigDecimal commissions,
@@ -21,7 +22,8 @@ public record OptionInput(
         Objects.requireNonNull(type, "Il tipo di opzione è obbligatorio");
         Objects.requireNonNull(currentUnderlyingPrice, "Il prezzo corrente è obbligatorio");
         Objects.requireNonNull(strike, "Lo strike è obbligatorio");
-        Objects.requireNonNull(unitPremium, "Il premio è obbligatorio");
+        Objects.requireNonNull(bid, "Il Bid è obbligatorio");
+        Objects.requireNonNull(ask, "L'Ask è obbligatorio");
         Objects.requireNonNull(commissions, "Le commissioni sono obbligatorie");
         Objects.requireNonNull(expirationDate, "La scadenza è obbligatoria");
         Objects.requireNonNull(scenarioMin, "Il prezzo minimo è obbligatorio");
@@ -30,12 +32,16 @@ public record OptionInput(
 
         requirePositive(currentUnderlyingPrice, "Il prezzo corrente deve essere maggiore di zero");
         requirePositive(strike, "Lo strike deve essere maggiore di zero");
-        requireNonNegative(unitPremium, "Il premio non può essere negativo");
+        requireNonNegative(bid, "Il Bid non può essere negativo");
+        requirePositive(ask, "L'Ask deve essere maggiore di zero");
         requireNonNegative(commissions, "Le commissioni non possono essere negative");
         requireNonNegative(scenarioMin, "Il prezzo minimo non può essere negativo");
         requirePositive(scenarioMax, "Il prezzo massimo deve essere maggiore di zero");
         requirePositive(scenarioStep, "Il passo deve essere maggiore di zero");
 
+        if (ask.compareTo(bid) < 0) {
+            throw new IllegalArgumentException("L'Ask non può essere inferiore al Bid");
+        }
         if (contracts <= 0) {
             throw new IllegalArgumentException("Il numero di contratti deve essere maggiore di zero");
         }
@@ -51,6 +57,13 @@ public record OptionInput(
         if (rows.compareTo(BigDecimal.valueOf(10_000)) > 0) {
             throw new IllegalArgumentException("L'intervallo genera troppe righe: aumenta il passo");
         }
+    }
+
+    /**
+     * Per l'acquisto di una Call o Put, il riferimento prudente è l'Ask.
+     */
+    public BigDecimal purchasePremium() {
+        return ask;
     }
 
     public int controlledShares() {

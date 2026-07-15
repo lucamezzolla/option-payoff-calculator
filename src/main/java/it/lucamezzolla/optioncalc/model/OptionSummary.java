@@ -5,8 +5,12 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 
 public record OptionSummary(
+        BigDecimal unitPremium,
         BigDecimal premiumTotal,
         BigDecimal totalCost,
+        BigDecimal spreadPerShare,
+        BigDecimal spreadTotal,
+        BigDecimal spreadPercent,
         BigDecimal breakEven,
         BigDecimal maximumLoss,
         int controlledShares,

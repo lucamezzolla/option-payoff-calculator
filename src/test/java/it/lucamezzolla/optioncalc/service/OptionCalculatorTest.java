@@ -29,11 +29,21 @@ class OptionCalculatorTest {
     }
 
     @Test
-    void callBreakEvenShouldBeStrikePlusPremium() {
+    void callBreakEvenShouldUseAskAsPurchasePremium() {
         OptionSummary summary = calculator.summarize(callInput());
 
+        assertEquals(new BigDecimal("0.3400"), summary.unitPremium());
         assertEquals(new BigDecimal("15.0900"), summary.breakEven());
         assertEquals(new BigDecimal("34.00"), summary.maximumLoss());
+    }
+
+    @Test
+    void spreadShouldBeCalculatedFromBidAndAsk() {
+        OptionSummary summary = calculator.summarize(callInput());
+
+        assertEquals(new BigDecimal("0.0400"), summary.spreadPerShare());
+        assertEquals(new BigDecimal("4.00"), summary.spreadTotal());
+        assertEquals(new BigDecimal("12.50"), summary.spreadPercent());
     }
 
     @Test
@@ -42,6 +52,7 @@ class OptionCalculatorTest {
                 OptionType.PUT,
                 new BigDecimal("14.84"),
                 new BigDecimal("15.00"),
+                new BigDecimal("0.25"),
                 new BigDecimal("0.30"),
                 1,
                 100,
@@ -66,6 +77,7 @@ class OptionCalculatorTest {
                 OptionType.CALL,
                 new BigDecimal("14.84"),
                 new BigDecimal("14.75"),
+                new BigDecimal("0.30"),
                 new BigDecimal("0.34"),
                 1,
                 100,

@@ -1,19 +1,22 @@
-# Option Payoff Calculator v1.0.0
+# Option Payoff Calculator v1.1.0
 
-Prima release pubblica del calcolatore desktop per il payoff a scadenza delle opzioni.
+Aggiornamento dell'interfaccia e dei calcoli di mercato per Call e Put acquistate.
 
-## Funzionalità incluse
+## Novità
 
-- calcolo per Call e Put acquistate;
-- premio totale, costo complessivo e perdita massima;
-- pareggio comprensivo delle commissioni;
-- tabella degli scenari alla scadenza;
-- grafico del profitto/perdita netto;
-- supporto per contratti e moltiplicatori differenti;
-- pulsante Pulisci per iniziare un nuovo calcolo;
-- build con Maven oppure direttamente con JDK 21;
-- test automatici JUnit 5.
+- aggiunti i campi separati **Bid opzione** e **Ask opzione**;
+- l'Ask viene usato automaticamente come premio unitario di acquisto;
+- il pareggio viene calcolato automaticamente usando l'Ask e le commissioni;
+- aggiunto il calcolo dello spread Bid/Ask unitario, totale e percentuale;
+- aggiunto il pulsante **Apri grande** nel pannello degli scenari;
+- tabella e grafico possono essere aperti in una finestra separata, ridimensionabile e massimizzabile;
+- doppio clic sulla tabella per aprire la vista estesa;
+- documentazione e test aggiornati.
+
+## Precisazione sul premio
+
+Bid e Ask sono già quotazioni del premio di mercato. La versione 1.1.0 non usa un modello teorico come Black-Scholes: per una simulazione di acquisto utilizza l'Ask visualizzato dal broker.
 
 ## Limiti noti
 
-La versione 1.0.0 calcola esclusivamente il payoff alla scadenza. Non include ancora una stima del premio prima della scadenza basata su volatilità implicita e greche.
+Il programma continua a calcolare esclusivamente il payoff alla scadenza. Non stima il prezzo dell'opzione prima della scadenza in funzione di volatilità implicita e greche.

@@ -9,12 +9,14 @@ import it.lucamezzolla.optioncalc.service.OptionCalculator;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
+import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
+import javax.swing.JSplitPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.SpinnerDateModel;
@@ -28,6 +30,8 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.time.LocalDate;
@@ -44,7 +48,8 @@ public final class MainFrame extends JFrame {
     private final JComboBox<OptionType> typeCombo = new JComboBox<>(OptionType.values());
     private final JTextField currentPriceField = new JTextField("", 10);
     private final JTextField strikeField = new JTextField("", 10);
-    private final JTextField premiumField = new JTextField("", 10);
+    private final JTextField bidField = new JTextField("", 10);
+    private final JTextField askField = new JTextField("", 10);
     private final JTextField contractsField = new JTextField("1", 10);
     private final JTextField multiplierField = new JTextField("100", 10);
     private final JTextField commissionsField = new JTextField("0", 10);
@@ -57,8 +62,12 @@ public final class MainFrame extends JFrame {
     private final JTextField maxField = new JTextField("", 10);
     private final JTextField stepField = new JTextField("", 10);
 
+    private final JLabel unitPremiumValue = valueLabel();
     private final JLabel premiumTotalValue = valueLabel();
     private final JLabel totalCostValue = valueLabel();
+    private final JLabel spreadPerShareValue = valueLabel();
+    private final JLabel spreadTotalValue = valueLabel();
+    private final JLabel spreadPercentValue = valueLabel();
     private final JLabel breakEvenValue = valueLabel();
     private final JLabel maxLossValue = valueLabel();
     private final JLabel controlledSharesValue = valueLabel();
@@ -69,7 +78,7 @@ public final class MainFrame extends JFrame {
         super("Option Payoff Calculator");
 
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setMinimumSize(new Dimension(1050, 760));
+        setMinimumSize(new Dimension(1120, 800));
         setLocationByPlatform(true);
 
         JPanel root = new JPanel(new BorderLayout(10, 10));
@@ -91,7 +100,7 @@ public final class MainFrame extends JFrame {
         title.setFont(title.getFont().deriveFont(Font.BOLD, 22f));
 
         JLabel subtitle = new JLabel(
-                "Simulazione a scadenza per Call e Put acquistate. Il premio unitario va inserito dal Bid/Ask o dal prezzo eseguito.");
+                "Simulazione a scadenza per Call e Put acquistate. Inserisci Bid e Ask: per l'acquisto il premio usato è automaticamente l'Ask.");
         subtitle.setBorder(new EmptyBorder(4, 0, 0, 0));
 
         panel.add(title, BorderLayout.NORTH);
@@ -126,7 +135,8 @@ public final class MainFrame extends JFrame {
         addField(panel, row++, "Tipo", typeCombo);
         addField(panel, row++, "Prezzo attuale sottostante", currentPriceField);
         addField(panel, row++, "Strike", strikeField);
-        addField(panel, row++, "Premio unitario (Ask/eseguito)", premiumField);
+        addField(panel, row++, "Bid opzione", bidField);
+        addField(panel, row++, "Ask opzione", askField);
         addField(panel, row++, "Contratti", contractsField);
         addField(panel, row++, "Moltiplicatore", multiplierField);
         addField(panel, row++, "Commissioni totali", commissionsField);
@@ -161,8 +171,12 @@ public final class MainFrame extends JFrame {
         JPanel panel = new JPanel(new GridLayout(0, 2, 8, 8));
         panel.setBorder(BorderFactory.createTitledBorder("Riepilogo"));
 
+        addSummary(panel, "Premio unitario usato (Ask)", unitPremiumValue);
         addSummary(panel, "Premio totale", premiumTotalValue);
         addSummary(panel, "Costo totale", totalCostValue);
+        addSummary(panel, "Spread unitario Bid/Ask", spreadPerShareValue);
+        addSummary(panel, "Spread totale", spreadTotalValue);
+        addSummary(panel, "Spread percentuale", spreadPercentValue);
         addSummary(panel, "Pareggio a scadenza", breakEvenValue);
         addSummary(panel, "Perdita massima", maxLossValue);
         addSummary(panel, "Azioni controllate", controlledSharesValue);
@@ -170,7 +184,7 @@ public final class MainFrame extends JFrame {
         addSummary(panel, "Movimento fino al pareggio", movementValue);
 
         JLabel note = new JLabel(
-                "<html><b>Nota:</b> prima della scadenza il prezzo reale dipende anche da volatilità implicita, Theta, Delta, Gamma, Vega e spread.</html>");
+                "<html><b>Nota:</b> Bid e Ask sono già quotazioni del premio di mercato. Il programma usa l'Ask per simulare l'acquisto; non stima un prezzo teorico.</html>");
         note.setVerticalAlignment(SwingConstants.TOP);
         panel.add(note);
         panel.add(new JLabel());
@@ -178,7 +192,36 @@ public final class MainFrame extends JFrame {
         return panel;
     }
 
-    private JScrollPane createTablePanel() {
+    private JPanel createTablePanel() {
+        JPanel panel = new JPanel(new BorderLayout(6, 6));
+        panel.setBorder(BorderFactory.createTitledBorder("Scenari alla scadenza"));
+
+        JTable table = createScenarioTable();
+        table.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent event) {
+                if (event.getClickCount() == 2) {
+                    openScenariosWindow();
+                }
+            }
+        });
+
+        JButton expandButton = new JButton("Apri grande ↗");
+        expandButton.setToolTipText("Apre tabella e grafico in una finestra separata e ridimensionabile");
+        expandButton.addActionListener(event -> openScenariosWindow());
+
+        JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        toolbar.add(expandButton);
+
+        JScrollPane scrollPane = new JScrollPane(table);
+        scrollPane.setPreferredSize(new Dimension(950, 190));
+
+        panel.add(toolbar, BorderLayout.NORTH);
+        panel.add(scrollPane, BorderLayout.CENTER);
+        return panel;
+    }
+
+    private JTable createScenarioTable() {
         JTable table = new JTable(tableModel);
         table.setAutoCreateRowSorter(true);
         table.setRowHeight(24);
@@ -199,11 +242,47 @@ public final class MainFrame extends JFrame {
         table.getColumnModel().getColumn(3).setCellRenderer(profitRenderer);
         table.getColumnModel().getColumn(4).setCellRenderer(profitRenderer);
         table.getColumnModel().getColumn(5).setCellRenderer(percentRenderer);
+        return table;
+    }
 
-        JScrollPane scrollPane = new JScrollPane(table);
-        scrollPane.setBorder(BorderFactory.createTitledBorder("Scenari alla scadenza"));
-        scrollPane.setPreferredSize(new Dimension(950, 290));
-        return scrollPane;
+    private void openScenariosWindow() {
+        if (tableModel.getRowCount() == 0) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Esegui prima un calcolo per generare gli scenari.",
+                    "Scenari non disponibili",
+                    JOptionPane.INFORMATION_MESSAGE
+            );
+            return;
+        }
+
+        JDialog dialog = new JDialog(this, "Scenari alla scadenza — vista estesa", false);
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+
+        JTable expandedTable = createScenarioTable();
+        JScrollPane expandedScrollPane = new JScrollPane(expandedTable);
+
+        PayoffChartPanel expandedChart = new PayoffChartPanel();
+        expandedChart.setPreferredSize(new Dimension(1100, 320));
+        expandedChart.setScenarios(tableModel.getRows());
+
+        JSplitPane splitPane = new JSplitPane(
+                JSplitPane.VERTICAL_SPLIT,
+                expandedScrollPane,
+                expandedChart
+        );
+        splitPane.setResizeWeight(0.62);
+        splitPane.setOneTouchExpandable(true);
+
+        JPanel content = new JPanel(new BorderLayout(8, 8));
+        content.setBorder(new EmptyBorder(10, 10, 10, 10));
+        content.add(splitPane, BorderLayout.CENTER);
+
+        dialog.setContentPane(content);
+        dialog.setSize(1250, 760);
+        dialog.setMinimumSize(new Dimension(850, 500));
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
     }
 
     private void calculate() {
@@ -212,8 +291,12 @@ public final class MainFrame extends JFrame {
             OptionSummary summary = calculator.summarize(input);
             List<OptionScenario> scenarios = calculator.buildScenarios(input);
 
+            unitPremiumValue.setText(formatPrice(summary.unitPremium()));
             premiumTotalValue.setText(formatMoney(summary.premiumTotal()));
             totalCostValue.setText(formatMoney(summary.totalCost()));
+            spreadPerShareValue.setText(formatPrice(summary.spreadPerShare()));
+            spreadTotalValue.setText(formatMoney(summary.spreadTotal()));
+            spreadPercentValue.setText(formatPercent(summary.spreadPercent()));
             breakEvenValue.setText(formatPrice(summary.breakEven()));
             maxLossValue.setText(formatMoney(summary.maximumLoss()));
             controlledSharesValue.setText(Integer.toString(summary.controlledShares()));
@@ -242,7 +325,8 @@ public final class MainFrame extends JFrame {
                 (OptionType) typeCombo.getSelectedItem(),
                 decimal(currentPriceField.getText()),
                 decimal(strikeField.getText()),
-                decimal(premiumField.getText()),
+                decimal(bidField.getText()),
+                decimal(askField.getText()),
                 integer(contractsField.getText(), "Contratti"),
                 integer(multiplierField.getText(), "Moltiplicatore"),
                 decimal(commissionsField.getText()),
@@ -257,7 +341,8 @@ public final class MainFrame extends JFrame {
         typeCombo.setSelectedItem(OptionType.CALL);
         currentPriceField.setText("");
         strikeField.setText("");
-        premiumField.setText("");
+        bidField.setText("");
+        askField.setText("");
         contractsField.setText("1");
         multiplierField.setText("100");
         commissionsField.setText("0");
@@ -268,8 +353,12 @@ public final class MainFrame extends JFrame {
         maxField.setText("");
         stepField.setText("");
 
+        unitPremiumValue.setText("—");
         premiumTotalValue.setText("—");
         totalCostValue.setText("—");
+        spreadPerShareValue.setText("—");
+        spreadTotalValue.setText("—");
+        spreadPercentValue.setText("—");
         breakEvenValue.setText("—");
         maxLossValue.setText("—");
         controlledSharesValue.setText("—");
@@ -320,12 +409,15 @@ public final class MainFrame extends JFrame {
     private static BigDecimal decimal(String text) {
         try {
             String normalized = text.trim().replace(" ", "");
+            if (normalized.isEmpty()) {
+                throw new NumberFormatException();
+            }
             if (normalized.contains(",")) {
                 normalized = normalized.replace(".", "").replace(",", ".");
             }
             return new BigDecimal(normalized);
         } catch (NumberFormatException ex) {
-            throw new IllegalArgumentException("Numero non valido: " + text);
+            throw new IllegalArgumentException("Numero non valido o mancante: " + text);
         }
     }
 
