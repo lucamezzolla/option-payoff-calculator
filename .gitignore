@@ -1,0 +1,24 @@
+# Maven / Java build
+/target/
+/out/
+/bin/
+*.class
+*.jar
+
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
