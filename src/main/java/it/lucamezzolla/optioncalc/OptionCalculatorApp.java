@@ -15,7 +15,7 @@ public final class OptionCalculatorApp {
             try {
                 UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
             } catch (Exception ignored) {
-                // Il look and feel standard di Swing resta disponibile.
+                // Swing's default look and feel remains available.
             }
 
             MainFrame frame = new MainFrame();

@@ -1,22 +1,21 @@
-# Option Payoff Calculator v1.1.0
+# Option Payoff Calculator v1.2.0
 
-Aggiornamento dell'interfaccia e dei calcoli di mercato per Call e Put acquistate.
+## Highlights
 
-## Novità
+- English is now the default application language.
+- Added runtime language switching for English, Italian, Spanish, Portuguese and French.
+- Localized the complete interface, including validation messages, table headers, chart text and scenario windows.
+- Removed the embedded scenario table and chart from the main window.
+- Added a contextual **Scenarios ↑** button next to **Clear**.
+- The scenario button is shown only after a successful calculation.
+- Pressing **Clear** hides the scenario button, clears calculated scenarios and closes open scenario windows.
+- Scenario results now open exclusively in a separate resizable and maximizable window.
+- Number and currency formatting follow the selected language.
 
-- aggiunti i campi separati **Bid opzione** e **Ask opzione**;
-- l'Ask viene usato automaticamente come premio unitario di acquisto;
-- il pareggio viene calcolato automaticamente usando l'Ask e le commissioni;
-- aggiunto il calcolo dello spread Bid/Ask unitario, totale e percentuale;
-- aggiunto il pulsante **Apri grande** nel pannello degli scenari;
-- tabella e grafico possono essere aperti in una finestra separata, ridimensionabile e massimizzabile;
-- doppio clic sulla tabella per aprire la vista estesa;
-- documentazione e test aggiornati.
+## Technical changes
 
-## Precisazione sul premio
-
-Bid e Ask sono già quotazioni del premio di mercato. La versione 1.1.0 non usa un modello teorico come Black-Scholes: per una simulazione di acquisto utilizza l'Ask visualizzato dal broker.
-
-## Limiti noti
-
-Il programma continua a calcolare esclusivamente il payoff alla scadenza. Non stima il prezzo dell'opzione prima della scadenza in funzione di volatilità implicita e greche.
+- Added Java `ResourceBundle`-based internationalization.
+- Added `AppLanguage` and `I18n` components.
+- Added localized validation through `ValidationException`.
+- Added `ScenariosDialog` and centralized table configuration.
+- Updated Maven project version to `1.2.0`.

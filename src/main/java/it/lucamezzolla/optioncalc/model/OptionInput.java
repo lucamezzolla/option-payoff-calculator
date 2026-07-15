@@ -1,5 +1,7 @@
 package it.lucamezzolla.optioncalc.model;
 
+import it.lucamezzolla.optioncalc.validation.ValidationException;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Objects;
@@ -19,66 +21,77 @@ public record OptionInput(
         BigDecimal scenarioStep) {
 
     public OptionInput {
-        Objects.requireNonNull(type, "Il tipo di opzione è obbligatorio");
-        Objects.requireNonNull(currentUnderlyingPrice, "Il prezzo corrente è obbligatorio");
-        Objects.requireNonNull(strike, "Lo strike è obbligatorio");
-        Objects.requireNonNull(bid, "Il Bid è obbligatorio");
-        Objects.requireNonNull(ask, "L'Ask è obbligatorio");
-        Objects.requireNonNull(commissions, "Le commissioni sono obbligatorie");
-        Objects.requireNonNull(expirationDate, "La scadenza è obbligatoria");
-        Objects.requireNonNull(scenarioMin, "Il prezzo minimo è obbligatorio");
-        Objects.requireNonNull(scenarioMax, "Il prezzo massimo è obbligatorio");
-        Objects.requireNonNull(scenarioStep, "Il passo è obbligatorio");
+        requireNotNull(type, "validation.type.required");
+        requireNotNull(currentUnderlyingPrice, "validation.currentPrice.required");
+        requireNotNull(strike, "validation.strike.required");
+        requireNotNull(bid, "validation.bid.required");
+        requireNotNull(ask, "validation.ask.required");
+        requireNotNull(commissions, "validation.commissions.required");
+        requireNotNull(expirationDate, "validation.expiration.required");
+        requireNotNull(scenarioMin, "validation.scenarioMin.required");
+        requireNotNull(scenarioMax, "validation.scenarioMax.required");
+        requireNotNull(scenarioStep, "validation.scenarioStep.required");
 
-        requirePositive(currentUnderlyingPrice, "Il prezzo corrente deve essere maggiore di zero");
-        requirePositive(strike, "Lo strike deve essere maggiore di zero");
-        requireNonNegative(bid, "Il Bid non può essere negativo");
-        requirePositive(ask, "L'Ask deve essere maggiore di zero");
-        requireNonNegative(commissions, "Le commissioni non possono essere negative");
-        requireNonNegative(scenarioMin, "Il prezzo minimo non può essere negativo");
-        requirePositive(scenarioMax, "Il prezzo massimo deve essere maggiore di zero");
-        requirePositive(scenarioStep, "Il passo deve essere maggiore di zero");
+        requirePositive(currentUnderlyingPrice, "validation.currentPrice.positive");
+        requirePositive(strike, "validation.strike.positive");
+        requireNonNegative(bid, "validation.bid.nonNegative");
+        requirePositive(ask, "validation.ask.positive");
+        requireNonNegative(commissions, "validation.commissions.nonNegative");
+        requireNonNegative(scenarioMin, "validation.scenarioMin.nonNegative");
+        requirePositive(scenarioMax, "validation.scenarioMax.positive");
+        requirePositive(scenarioStep, "validation.scenarioStep.positive");
 
         if (ask.compareTo(bid) < 0) {
-            throw new IllegalArgumentException("L'Ask non può essere inferiore al Bid");
+            throw new ValidationException("validation.askBelowBid");
         }
         if (contracts <= 0) {
-            throw new IllegalArgumentException("Il numero di contratti deve essere maggiore di zero");
+            throw new ValidationException("validation.contracts.positive");
         }
         if (multiplier <= 0) {
-            throw new IllegalArgumentException("Il moltiplicatore deve essere maggiore di zero");
+            throw new ValidationException("validation.multiplier.positive");
         }
         if (scenarioMax.compareTo(scenarioMin) < 0) {
-            throw new IllegalArgumentException("Il prezzo massimo deve essere maggiore o uguale al minimo");
+            throw new ValidationException("validation.scenarioRange");
         }
 
         BigDecimal rows = scenarioMax.subtract(scenarioMin)
                 .divide(scenarioStep, 0, java.math.RoundingMode.DOWN);
         if (rows.compareTo(BigDecimal.valueOf(10_000)) > 0) {
-            throw new IllegalArgumentException("L'intervallo genera troppe righe: aumenta il passo");
+            throw new ValidationException("validation.tooManyRows");
         }
     }
 
     /**
-     * Per l'acquisto di una Call o Put, il riferimento prudente è l'Ask.
+     * For the purchase of a Call or Put, the conservative reference is the Ask.
      */
     public BigDecimal purchasePremium() {
         return ask;
     }
 
     public int controlledShares() {
-        return Math.multiplyExact(contracts, multiplier);
-    }
-
-    private static void requirePositive(BigDecimal value, String message) {
-        if (value.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException(message);
+        try {
+            return Math.multiplyExact(contracts, multiplier);
+        } catch (ArithmeticException ex) {
+            throw new ValidationException("validation.controlledSharesOverflow");
         }
     }
 
-    private static void requireNonNegative(BigDecimal value, String message) {
+    private static <T> T requireNotNull(T value, String messageKey) {
+        if (Objects.isNull(value)) {
+            throw new ValidationException(messageKey);
+        }
+        return value;
+    }
+
+    private static void requirePositive(BigDecimal value, String messageKey) {
+        if (value.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ValidationException(messageKey);
+        }
+    }
+
+    private static void requireNonNegative(BigDecimal value, String messageKey) {
         if (value.compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException(message);
+            throw new ValidationException(messageKey);
         }
     }
 }

@@ -1,42 +1,52 @@
 # Option Payoff Calculator
 
-Applicazione desktop didattica per simulare il risultato **alla scadenza** di opzioni Call e Put acquistate.
+[![Donate with PayPal](https://img.shields.io/badge/Donate-PayPal-00457C?logo=paypal&logoColor=white)](https://www.paypal.com/paypalme/lucamezzolla82)
 
-L'obiettivo è rendere immediatamente visibili premio di acquisto, costo, spread, pareggio, perdita massima e profitto/perdita per differenti prezzi finali del sottostante.
+> If you find option-payoff-calculator useful or want to support its development, you can make a small donation through PayPal.  
+> Your support helps improve documentation, testing, safety checks, UI polish and controlled production-readiness.
 
-## Funzionalità
+---
 
-- simulazione di Call e Put acquistate;
-- input separati per **Bid** e **Ask** dell'opzione;
-- selezione automatica dell'**Ask** come premio unitario per la simulazione di acquisto;
-- calcolo del premio totale e del costo complessivo;
-- calcolo dello spread Bid/Ask unitario, totale e percentuale;
-- calcolo del punto di pareggio alla scadenza;
-- calcolo della perdita massima;
-- indicazione delle azioni controllate;
-- calcolo del movimento percentuale necessario per il pareggio;
-- tabella degli scenari alla scadenza;
-- pulsante **Apri grande** per visualizzare tabella e grafico in una finestra separata e ridimensionabile;
-- grafico del profitto/perdita netto;
-- commissioni incluse nei calcoli;
-- pulsante **Pulisci** per iniziare rapidamente un nuovo calcolo;
-- supporto sia alla virgola sia al punto come separatore decimale.
+A multilingual Java Swing desktop application that simulates the **expiration payoff** of purchased Call and Put options.
 
-## Tecnologie utilizzate
+The application makes the purchase premium, spread, total cost, break-even point, maximum loss and profit/loss scenarios immediately visible.
+
+## Features
+
+- purchased Call and Put simulations;
+- separate **Bid** and **Ask** inputs;
+- automatic use of the **Ask** as the purchase premium;
+- total premium, total cost and Bid/Ask spread calculations;
+- break-even and maximum-loss calculations;
+- controlled-share and movement-to-break-even calculations;
+- a contextual **Scenarios ↑** button that appears only after a successful calculation;
+- scenarios displayed in a separate resizable and maximizable window;
+- payoff table and net profit/loss chart;
+- runtime interface language switching;
+- complete interface translations for:
+  - English — default;
+  - Italian;
+  - Spanish;
+  - Portuguese;
+  - French;
+- localized labels, buttons, validation messages, table headers, chart text and scenario windows;
+- support for both comma and dot decimal input;
+- commissions included in calculations.
+
+## Technologies
 
 - **Java 21**;
-- **Java Swing** per l'interfaccia desktop;
-- **Maven** per build e gestione del progetto;
-- **JUnit 5** per i test automatici;
-- **BigDecimal** per evitare gli errori tipici dei calcoli finanziari con `double`;
-- nessuna dipendenza grafica esterna.
+- **Java Swing**;
+- Java `ResourceBundle` for internationalization;
+- **Maven**;
+- **JUnit 5**;
+- **BigDecimal** for financial calculations;
+- no external UI or chart dependencies.
 
-## Requisiti
+## Requirements
 
 - JDK 21;
-- Maven 3.8 o superiore.
-
-Verifica dell'ambiente:
+- Maven 3.8 or later.
 
 ```bash
 java -version
@@ -44,91 +54,108 @@ javac -version
 mvn -version
 ```
 
-## Compilazione e avvio
+## Build and run
 
 ```bash
 mvn clean package
-java -jar target/option-payoff-calculator-1.1.0.jar
+java -jar target/option-payoff-calculator-1.2.0.jar
 ```
 
-## Esecuzione dei test
+## Tests
 
 ```bash
 mvn test
 ```
 
-## Dati da inserire
+## Input data
 
-- **Tipo**: Call oppure Put.
-- **Prezzo attuale sottostante**: prezzo corrente dell'azione o altro sottostante.
-- **Strike**: prezzo di esercizio del contratto.
-- **Bid opzione**: miglior prezzo al quale il mercato è disposto ad acquistare l'opzione.
-- **Ask opzione**: miglior prezzo al quale il mercato è disposto a vendere l'opzione.
-- **Contratti**: numero di contratti acquistati.
-- **Moltiplicatore**: quantità controllata da ogni contratto, spesso 100.
-- **Commissioni totali**: costi complessivi da includere nell'operazione.
-- **Scadenza**: data di scadenza dell'opzione.
-- **Scenario minimo, massimo e passo**: intervallo dei prezzi finali da mostrare nella tabella.
+- **Type**: Call or Put.
+- **Current underlying price**: current market price of the underlying.
+- **Strike**: exercise price.
+- **Option Bid**: best current market purchase offer for the option.
+- **Option Ask**: best current market sale offer for the option.
+- **Contracts**: number of contracts purchased.
+- **Multiplier**: units controlled by each contract, commonly 100.
+- **Total commissions**: costs included in the simulation.
+- **Expiration**: option expiration date.
+- **Minimum scenario, maximum scenario and step**: final-price range used to generate scenarios.
 
-Per un acquisto il programma usa automaticamente l'**Ask** come premio unitario. Bid e Ask non consentono di ricavare un prezzo teorico: sono già le quotazioni del premio di mercato.
+For a purchase simulation, the application automatically uses the **Ask** as the unit premium. Bid and Ask are market premium quotes; they do not calculate a theoretical option price.
 
-## Formule
+## Formulas
 
-### Dati comuni
-
-```text
-azioni controllate = contratti × moltiplicatore
-premio unitario di acquisto = Ask
-premio totale = Ask × azioni controllate
-spread unitario = Ask - Bid
-spread totale = spread unitario × azioni controllate
-```
-
-### Call acquistata
+### Common values
 
 ```text
-valore intrinseco unitario = max(prezzo finale - strike, 0)
-pareggio = strike + Ask + commissioni / azioni controllate
-profitto netto = valore totale dell'opzione - premio totale - commissioni
+controlled shares = contracts × multiplier
+purchase unit premium = Ask
+total premium = Ask × controlled shares
+unit spread = Ask - Bid
+total spread = unit spread × controlled shares
 ```
 
-### Put acquistata
+### Purchased Call
 
 ```text
-valore intrinseco unitario = max(strike - prezzo finale, 0)
-pareggio = strike - Ask - commissioni / azioni controllate
-profitto netto = valore totale dell'opzione - premio totale - commissioni
+intrinsic value per share = max(final price - strike, 0)
+break-even = strike + Ask + commissions / controlled shares
+net profit = total option value - total premium - commissions
 ```
 
-## Vista estesa degli scenari
+### Purchased Put
 
-Il pulsante **Apri grande** apre la tabella e il grafico in una finestra indipendente:
+```text
+intrinsic value per share = max(strike - final price, 0)
+break-even = strike - Ask - commissions / controlled shares
+net profit = total option value - total premium - commissions
+```
 
-- la finestra principale non viene modificata;
-- la nuova finestra è ridimensionabile e massimizzabile;
-- il divisore tra tabella e grafico può essere trascinato;
-- un doppio clic sulla tabella principale apre la stessa vista estesa.
+## Scenario window
 
-## Limiti della simulazione
+The main window contains no embedded scenario table or chart. After a successful calculation, **Scenarios ↑** appears next to **Clear**.
 
-Il programma calcola il payoff **alla scadenza**. Non stima il prezzo teorico dell'opzione prima della scadenza.
+The button opens a separate window containing:
 
-Prima della scadenza il premio dipende anche da:
+- the full payoff table;
+- the net profit/loss chart;
+- a draggable divider;
+- resizing and native maximization support.
 
-- volatilità implicita;
-- tempo residuo e Theta;
-- Delta e Gamma;
-- Vega;
-- tassi e dividendi;
-- liquidità del contratto.
+Pressing **Clear** removes the current scenarios, hides the button and closes any open scenario windows.
 
-Il progetto ha finalità didattiche e non costituisce consulenza finanziaria.
+## Internationalization
 
-## Struttura del progetto
+English is the default interface language. The language selector in the header changes the application immediately without clearing entered values or calculated results.
+
+Translations are stored in:
+
+```text
+src/main/resources/i18n/
+├── Messages.properties
+├── Messages_it.properties
+├── Messages_es.properties
+├── Messages_pt.properties
+└── Messages_fr.properties
+```
+
+The language change is also applied to open scenario windows, table headers, chart labels, formatted numbers and validation messages.
+
+## Limitations
+
+The application calculates payoff **at expiration**. It does not estimate the option's theoretical price before expiration.
+
+Before expiration, the option premium also depends on implied volatility, time decay, Delta, Gamma, Vega, rates, dividends and liquidity.
+
+This project is educational and does not constitute financial advice.
+
+## Project structure
 
 ```text
 src/main/java/it/lucamezzolla/optioncalc
 ├── OptionCalculatorApp.java
+├── i18n
+│   ├── AppLanguage.java
+│   └── I18n.java
 ├── model
 │   ├── OptionInput.java
 │   ├── OptionScenario.java
@@ -136,32 +163,34 @@ src/main/java/it/lucamezzolla/optioncalc
 │   └── OptionType.java
 ├── service
 │   └── OptionCalculator.java
-└── ui
-    ├── MainFrame.java
-    ├── PayoffChartPanel.java
-    ├── PayoffTableModel.java
-    └── ProfitLossRenderer.java
+├── ui
+│   ├── MainFrame.java
+│   ├── PayoffChartPanel.java
+│   ├── PayoffTableModel.java
+│   ├── ProfitLossRenderer.java
+│   ├── ScenarioTableSupport.java
+│   └── ScenariosDialog.java
+└── validation
+    └── ValidationException.java
 ```
 
-La logica finanziaria è separata dall'interfaccia Swing, così può essere testata e riutilizzata senza dipendere dalla UI.
-
-## Aggiornamento del repository e tag `v1.1.0`
+## Release and tag `v1.2.0`
 
 ```bash
 git add .
-git commit -m "Add automatic Ask premium and expanded scenarios view"
-git push
+git commit -m "Add multilingual UI and contextual scenarios window"
+git push origin main
 
-git tag -a v1.1.0 -m "Option Payoff Calculator v1.1.0"
-git push origin v1.1.0
+git tag -a v1.2.0 -m "Option Payoff Calculator v1.2.0"
+git push origin v1.2.0
 ```
 
-Con GitHub CLI:
+With GitHub CLI:
 
 ```bash
 mvn clean package
-gh release create v1.1.0 \
-  target/option-payoff-calculator-1.1.0.jar \
-  --title "Option Payoff Calculator v1.1.0" \
+gh release create v1.2.0 \
+  target/option-payoff-calculator-1.2.0.jar \
+  --title "Option Payoff Calculator v1.2.0" \
   --notes-file RELEASE_NOTES.md
 ```

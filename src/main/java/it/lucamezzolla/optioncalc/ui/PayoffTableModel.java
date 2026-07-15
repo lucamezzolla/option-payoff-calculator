@@ -1,5 +1,6 @@
 package it.lucamezzolla.optioncalc.ui;
 
+import it.lucamezzolla.optioncalc.i18n.I18n;
 import it.lucamezzolla.optioncalc.model.OptionScenario;
 
 import javax.swing.table.AbstractTableModel;
@@ -8,13 +9,13 @@ import java.util.List;
 
 public final class PayoffTableModel extends AbstractTableModel {
 
-    private static final String[] COLUMNS = {
-            "Prezzo sottostante a scadenza",
-            "Valore intrinseco per azione",
-            "Valore opzione totale",
-            "P/L lordo",
-            "P/L netto",
-            "ROI"
+    private static final String[] COLUMN_KEYS = {
+            "table.underlyingAtExpiration",
+            "table.intrinsicPerShare",
+            "table.totalOptionValue",
+            "table.grossProfitLoss",
+            "table.netProfitLoss",
+            "table.roi"
     };
 
     private List<OptionScenario> rows = new ArrayList<>();
@@ -24,12 +25,12 @@ public final class PayoffTableModel extends AbstractTableModel {
         fireTableDataChanged();
     }
 
-    public OptionScenario getScenario(int rowIndex) {
-        return rows.get(rowIndex);
-    }
-
     public List<OptionScenario> getRows() {
         return List.copyOf(rows);
+    }
+
+    public void refreshLanguage() {
+        fireTableStructureChanged();
     }
 
     @Override
@@ -39,12 +40,12 @@ public final class PayoffTableModel extends AbstractTableModel {
 
     @Override
     public int getColumnCount() {
-        return COLUMNS.length;
+        return COLUMN_KEYS.length;
     }
 
     @Override
     public String getColumnName(int column) {
-        return COLUMNS[column];
+        return I18n.text(COLUMN_KEYS[column]);
     }
 
     @Override
@@ -58,7 +59,7 @@ public final class PayoffTableModel extends AbstractTableModel {
             case 3 -> scenario.grossProfitLoss();
             case 4 -> scenario.netProfitLoss();
             case 5 -> scenario.roiPercent();
-            default -> throw new IllegalArgumentException("Colonna non valida: " + columnIndex);
+            default -> throw new IllegalArgumentException("Invalid column: " + columnIndex);
         };
     }
 

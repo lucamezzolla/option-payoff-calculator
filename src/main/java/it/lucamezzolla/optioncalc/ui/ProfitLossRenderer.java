@@ -1,21 +1,23 @@
 package it.lucamezzolla.optioncalc.ui;
 
+import it.lucamezzolla.optioncalc.i18n.I18n;
+
 import javax.swing.JTable;
 import javax.swing.SwingConstants;
 import javax.swing.table.DefaultTableCellRenderer;
 import java.awt.Color;
 import java.awt.Component;
 import java.math.BigDecimal;
-import java.text.DecimalFormat;
+import java.text.NumberFormat;
 
 public final class ProfitLossRenderer extends DefaultTableCellRenderer {
 
-    private final DecimalFormat format;
+    private final int fractionDigits;
     private final boolean percent;
     private final boolean highlightSign;
 
-    public ProfitLossRenderer(String pattern, boolean percent, boolean highlightSign) {
-        this.format = new DecimalFormat(pattern);
+    public ProfitLossRenderer(int fractionDigits, boolean percent, boolean highlightSign) {
+        this.fractionDigits = fractionDigits;
         this.percent = percent;
         this.highlightSign = highlightSign;
         setHorizontalAlignment(SwingConstants.RIGHT);
@@ -34,6 +36,9 @@ public final class ProfitLossRenderer extends DefaultTableCellRenderer {
                 table, value, isSelected, hasFocus, row, column);
 
         if (value instanceof BigDecimal decimal) {
+            NumberFormat format = NumberFormat.getNumberInstance(I18n.locale());
+            format.setMinimumFractionDigits(fractionDigits);
+            format.setMaximumFractionDigits(fractionDigits);
             setText(format.format(decimal) + (percent ? " %" : " €"));
 
             if (!isSelected && highlightSign) {

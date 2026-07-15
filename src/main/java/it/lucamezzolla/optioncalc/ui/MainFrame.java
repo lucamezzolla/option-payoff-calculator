@@ -1,27 +1,28 @@
 package it.lucamezzolla.optioncalc.ui;
 
+import it.lucamezzolla.optioncalc.i18n.AppLanguage;
+import it.lucamezzolla.optioncalc.i18n.I18n;
 import it.lucamezzolla.optioncalc.model.OptionInput;
 import it.lucamezzolla.optioncalc.model.OptionScenario;
 import it.lucamezzolla.optioncalc.model.OptionSummary;
 import it.lucamezzolla.optioncalc.model.OptionType;
 import it.lucamezzolla.optioncalc.service.OptionCalculator;
+import it.lucamezzolla.optioncalc.validation.ValidationException;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
-import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
-import javax.swing.JSplitPane;
-import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.SpinnerDateModel;
 import javax.swing.SwingConstants;
+import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
+import javax.swing.border.TitledBorder;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -30,22 +31,25 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.math.BigDecimal;
-import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public final class MainFrame extends JFrame {
 
     private final OptionCalculator calculator = new OptionCalculator();
     private final PayoffTableModel tableModel = new PayoffTableModel();
-    private final PayoffChartPanel chartPanel = new PayoffChartPanel();
+    private final List<ScenariosDialog> scenarioDialogs = new ArrayList<>();
+    private OptionSummary lastSummary;
 
     private final JComboBox<OptionType> typeCombo = new JComboBox<>(OptionType.values());
+    private final JComboBox<AppLanguage> languageCombo = new JComboBox<>(AppLanguage.values());
     private final JTextField currentPriceField = new JTextField("", 10);
     private final JTextField strikeField = new JTextField("", 10);
     private final JTextField bidField = new JTextField("", 10);
@@ -62,6 +66,21 @@ public final class MainFrame extends JFrame {
     private final JTextField maxField = new JTextField("", 10);
     private final JTextField stepField = new JTextField("", 10);
 
+    private final JLabel headerTitle = new JLabel();
+    private final JLabel headerSubtitle = new JLabel();
+    private final JLabel languageLabel = new JLabel();
+    private final JButton calculateButton = new JButton();
+    private final JButton clearButton = new JButton();
+    private final JButton scenariosButton = new JButton();
+
+    private final JPanel inputPanel = new JPanel(new GridBagLayout());
+    private final JPanel summaryPanel = new JPanel(new GridLayout(0, 2, 8, 8));
+    private final TitledBorder inputBorder = BorderFactory.createTitledBorder("");
+    private final TitledBorder summaryBorder = BorderFactory.createTitledBorder("");
+
+    private final Map<String, JLabel> fieldLabels = new LinkedHashMap<>();
+    private final Map<String, JLabel> summaryLabels = new LinkedHashMap<>();
+
     private final JLabel unitPremiumValue = valueLabel();
     private final JLabel premiumTotalValue = valueLabel();
     private final JLabel totalCostValue = valueLabel();
@@ -73,12 +92,16 @@ public final class MainFrame extends JFrame {
     private final JLabel controlledSharesValue = valueLabel();
     private final JLabel daysValue = valueLabel();
     private final JLabel movementValue = valueLabel();
+    private final JLabel noteLabel = new JLabel();
 
     public MainFrame() {
-        super("Option Payoff Calculator");
+        super();
+
+        I18n.setLanguage(AppLanguage.ENGLISH);
+        languageCombo.setSelectedItem(AppLanguage.ENGLISH);
 
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setMinimumSize(new Dimension(1120, 800));
+        setMinimumSize(new Dimension(1080, 610));
         setLocationByPlatform(true);
 
         JPanel root = new JPanel(new BorderLayout(10, 10));
@@ -88,71 +111,66 @@ public final class MainFrame extends JFrame {
         root.add(createHeader(), BorderLayout.NORTH);
         root.add(createMainContent(), BorderLayout.CENTER);
 
+        languageCombo.addActionListener(event -> changeLanguage());
+
+        updateTexts();
         pack();
         setLocationRelativeTo(null);
         currentPriceField.requestFocusInWindow();
     }
 
     private JPanel createHeader() {
-        JPanel panel = new JPanel(new BorderLayout());
+        JPanel panel = new JPanel(new BorderLayout(12, 0));
 
-        JLabel title = new JLabel("Calcolatore payoff opzioni");
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 22f));
+        headerTitle.setFont(headerTitle.getFont().deriveFont(Font.BOLD, 22f));
+        headerSubtitle.setBorder(new EmptyBorder(4, 0, 0, 0));
 
-        JLabel subtitle = new JLabel(
-                "Simulazione a scadenza per Call e Put acquistate. Inserisci Bid e Ask: per l'acquisto il premio usato è automaticamente l'Ask.");
-        subtitle.setBorder(new EmptyBorder(4, 0, 0, 0));
+        JPanel titles = new JPanel(new BorderLayout());
+        titles.add(headerTitle, BorderLayout.NORTH);
+        titles.add(headerSubtitle, BorderLayout.CENTER);
 
-        panel.add(title, BorderLayout.NORTH);
-        panel.add(subtitle, BorderLayout.CENTER);
+        JPanel languagePanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        languagePanel.add(languageLabel);
+        languagePanel.add(languageCombo);
+
+        panel.add(titles, BorderLayout.CENTER);
+        panel.add(languagePanel, BorderLayout.EAST);
         return panel;
     }
 
     private JPanel createMainContent() {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
-
-        JPanel upper = new JPanel(new BorderLayout(10, 10));
-        upper.add(createInputPanel(), BorderLayout.WEST);
-        upper.add(createSummaryPanel(), BorderLayout.CENTER);
-
-        JPanel center = new JPanel(new BorderLayout(8, 8));
-        center.add(createTablePanel(), BorderLayout.CENTER);
-        center.add(chartPanel, BorderLayout.SOUTH);
-
-        panel.add(upper, BorderLayout.NORTH);
-        panel.add(center, BorderLayout.CENTER);
-
+        panel.add(createInputPanel(), BorderLayout.WEST);
+        panel.add(createSummaryPanel(), BorderLayout.CENTER);
         return panel;
     }
 
     private JPanel createInputPanel() {
-        JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBorder(BorderFactory.createTitledBorder("Dati del contratto"));
-
-        expirationSpinner.setEditor(new JSpinner.DateEditor(expirationSpinner, "dd/MM/yyyy"));
+        inputPanel.setBorder(inputBorder);
+        updateDateEditor();
 
         int row = 0;
-        addField(panel, row++, "Tipo", typeCombo);
-        addField(panel, row++, "Prezzo attuale sottostante", currentPriceField);
-        addField(panel, row++, "Strike", strikeField);
-        addField(panel, row++, "Bid opzione", bidField);
-        addField(panel, row++, "Ask opzione", askField);
-        addField(panel, row++, "Contratti", contractsField);
-        addField(panel, row++, "Moltiplicatore", multiplierField);
-        addField(panel, row++, "Commissioni totali", commissionsField);
-        addField(panel, row++, "Scadenza", expirationSpinner);
-        addField(panel, row++, "Scenario minimo", minField);
-        addField(panel, row++, "Scenario massimo", maxField);
-        addField(panel, row++, "Passo", stepField);
+        addField(inputPanel, row++, "field.type", typeCombo);
+        addField(inputPanel, row++, "field.currentUnderlyingPrice", currentPriceField);
+        addField(inputPanel, row++, "field.strike", strikeField);
+        addField(inputPanel, row++, "field.bid", bidField);
+        addField(inputPanel, row++, "field.ask", askField);
+        addField(inputPanel, row++, "field.contracts", contractsField);
+        addField(inputPanel, row++, "field.multiplier", multiplierField);
+        addField(inputPanel, row++, "field.commissions", commissionsField);
+        addField(inputPanel, row++, "field.expiration", expirationSpinner);
+        addField(inputPanel, row++, "field.scenarioMin", minField);
+        addField(inputPanel, row++, "field.scenarioMax", maxField);
+        addField(inputPanel, row++, "field.scenarioStep", stepField);
 
-        JButton calculateButton = new JButton("Calcola");
         calculateButton.addActionListener(event -> calculate());
-
-        JButton clearButton = new JButton("Pulisci");
         clearButton.addActionListener(event -> clearForm());
+        scenariosButton.addActionListener(event -> openScenariosWindow());
+        scenariosButton.setVisible(false);
 
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         buttons.add(clearButton);
+        buttons.add(scenariosButton);
         buttons.add(calculateButton);
 
         GridBagConstraints gbc = new GridBagConstraints();
@@ -162,126 +180,46 @@ public final class MainFrame extends JFrame {
         gbc.weightx = 1;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.insets = new Insets(10, 4, 4, 4);
-        panel.add(buttons, gbc);
+        inputPanel.add(buttons, gbc);
 
-        return panel;
+        return inputPanel;
     }
 
     private JPanel createSummaryPanel() {
-        JPanel panel = new JPanel(new GridLayout(0, 2, 8, 8));
-        panel.setBorder(BorderFactory.createTitledBorder("Riepilogo"));
+        summaryPanel.setBorder(summaryBorder);
 
-        addSummary(panel, "Premio unitario usato (Ask)", unitPremiumValue);
-        addSummary(panel, "Premio totale", premiumTotalValue);
-        addSummary(panel, "Costo totale", totalCostValue);
-        addSummary(panel, "Spread unitario Bid/Ask", spreadPerShareValue);
-        addSummary(panel, "Spread totale", spreadTotalValue);
-        addSummary(panel, "Spread percentuale", spreadPercentValue);
-        addSummary(panel, "Pareggio a scadenza", breakEvenValue);
-        addSummary(panel, "Perdita massima", maxLossValue);
-        addSummary(panel, "Azioni controllate", controlledSharesValue);
-        addSummary(panel, "Giorni alla scadenza", daysValue);
-        addSummary(panel, "Movimento fino al pareggio", movementValue);
+        addSummary(summaryPanel, "summary.unitPremium", unitPremiumValue);
+        addSummary(summaryPanel, "summary.premiumTotal", premiumTotalValue);
+        addSummary(summaryPanel, "summary.totalCost", totalCostValue);
+        addSummary(summaryPanel, "summary.spreadPerShare", spreadPerShareValue);
+        addSummary(summaryPanel, "summary.spreadTotal", spreadTotalValue);
+        addSummary(summaryPanel, "summary.spreadPercent", spreadPercentValue);
+        addSummary(summaryPanel, "summary.breakEven", breakEvenValue);
+        addSummary(summaryPanel, "summary.maximumLoss", maxLossValue);
+        addSummary(summaryPanel, "summary.controlledShares", controlledSharesValue);
+        addSummary(summaryPanel, "summary.daysToExpiration", daysValue);
+        addSummary(summaryPanel, "summary.movementToBreakEven", movementValue);
 
-        JLabel note = new JLabel(
-                "<html><b>Nota:</b> Bid e Ask sono già quotazioni del premio di mercato. Il programma usa l'Ask per simulare l'acquisto; non stima un prezzo teorico.</html>");
-        note.setVerticalAlignment(SwingConstants.TOP);
-        panel.add(note);
-        panel.add(new JLabel());
+        noteLabel.setVerticalAlignment(SwingConstants.TOP);
+        summaryPanel.add(noteLabel);
+        summaryPanel.add(new JLabel());
 
-        return panel;
-    }
-
-    private JPanel createTablePanel() {
-        JPanel panel = new JPanel(new BorderLayout(6, 6));
-        panel.setBorder(BorderFactory.createTitledBorder("Scenari alla scadenza"));
-
-        JTable table = createScenarioTable();
-        table.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent event) {
-                if (event.getClickCount() == 2) {
-                    openScenariosWindow();
-                }
-            }
-        });
-
-        JButton expandButton = new JButton("Apri grande ↗");
-        expandButton.setToolTipText("Apre tabella e grafico in una finestra separata e ridimensionabile");
-        expandButton.addActionListener(event -> openScenariosWindow());
-
-        JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
-        toolbar.add(expandButton);
-
-        JScrollPane scrollPane = new JScrollPane(table);
-        scrollPane.setPreferredSize(new Dimension(950, 190));
-
-        panel.add(toolbar, BorderLayout.NORTH);
-        panel.add(scrollPane, BorderLayout.CENTER);
-        return panel;
-    }
-
-    private JTable createScenarioTable() {
-        JTable table = new JTable(tableModel);
-        table.setAutoCreateRowSorter(true);
-        table.setRowHeight(24);
-        table.getTableHeader().setReorderingAllowed(false);
-
-        ProfitLossRenderer priceRenderer =
-                new ProfitLossRenderer("#,##0.0000", false, false);
-        ProfitLossRenderer moneyRenderer =
-                new ProfitLossRenderer("#,##0.00", false, false);
-        ProfitLossRenderer profitRenderer =
-                new ProfitLossRenderer("#,##0.00", false, true);
-        ProfitLossRenderer percentRenderer =
-                new ProfitLossRenderer("#,##0.00", true, true);
-
-        table.getColumnModel().getColumn(0).setCellRenderer(priceRenderer);
-        table.getColumnModel().getColumn(1).setCellRenderer(priceRenderer);
-        table.getColumnModel().getColumn(2).setCellRenderer(moneyRenderer);
-        table.getColumnModel().getColumn(3).setCellRenderer(profitRenderer);
-        table.getColumnModel().getColumn(4).setCellRenderer(profitRenderer);
-        table.getColumnModel().getColumn(5).setCellRenderer(percentRenderer);
-        return table;
+        return summaryPanel;
     }
 
     private void openScenariosWindow() {
         if (tableModel.getRowCount() == 0) {
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Esegui prima un calcolo per generare gli scenari.",
-                    "Scenari non disponibili",
-                    JOptionPane.INFORMATION_MESSAGE
-            );
             return;
         }
 
-        JDialog dialog = new JDialog(this, "Scenari alla scadenza — vista estesa", false);
-        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-
-        JTable expandedTable = createScenarioTable();
-        JScrollPane expandedScrollPane = new JScrollPane(expandedTable);
-
-        PayoffChartPanel expandedChart = new PayoffChartPanel();
-        expandedChart.setPreferredSize(new Dimension(1100, 320));
-        expandedChart.setScenarios(tableModel.getRows());
-
-        JSplitPane splitPane = new JSplitPane(
-                JSplitPane.VERTICAL_SPLIT,
-                expandedScrollPane,
-                expandedChart
-        );
-        splitPane.setResizeWeight(0.62);
-        splitPane.setOneTouchExpandable(true);
-
-        JPanel content = new JPanel(new BorderLayout(8, 8));
-        content.setBorder(new EmptyBorder(10, 10, 10, 10));
-        content.add(splitPane, BorderLayout.CENTER);
-
-        dialog.setContentPane(content);
-        dialog.setSize(1250, 760);
-        dialog.setMinimumSize(new Dimension(850, 500));
-        dialog.setLocationRelativeTo(this);
+        ScenariosDialog dialog = new ScenariosDialog(this, tableModel);
+        scenarioDialogs.add(dialog);
+        dialog.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosed(java.awt.event.WindowEvent event) {
+                scenarioDialogs.remove(dialog);
+            }
+        });
         dialog.setVisible(true);
     }
 
@@ -291,27 +229,20 @@ public final class MainFrame extends JFrame {
             OptionSummary summary = calculator.summarize(input);
             List<OptionScenario> scenarios = calculator.buildScenarios(input);
 
-            unitPremiumValue.setText(formatPrice(summary.unitPremium()));
-            premiumTotalValue.setText(formatMoney(summary.premiumTotal()));
-            totalCostValue.setText(formatMoney(summary.totalCost()));
-            spreadPerShareValue.setText(formatPrice(summary.spreadPerShare()));
-            spreadTotalValue.setText(formatMoney(summary.spreadTotal()));
-            spreadPercentValue.setText(formatPercent(summary.spreadPercent()));
-            breakEvenValue.setText(formatPrice(summary.breakEven()));
-            maxLossValue.setText(formatMoney(summary.maximumLoss()));
-            controlledSharesValue.setText(Integer.toString(summary.controlledShares()));
-            daysValue.setText(Long.toString(summary.daysToExpiration()));
-            movementValue.setText(formatPercent(summary.movementToBreakEvenPercent()));
+            lastSummary = summary;
+            renderSummary(summary);
 
             tableModel.setRows(scenarios);
-            chartPanel.setScenarios(scenarios);
+            scenarioDialogs.forEach(dialog -> dialog.setScenarios(scenarios));
+            scenariosButton.setVisible(true);
+            inputPanel.revalidate();
+            inputPanel.repaint();
+        } catch (ValidationException ex) {
+            showValidationError(I18n.text(ex.messageKey(), ex.arguments()));
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(
-                    this,
-                    ex.getMessage(),
-                    "Dati non validi",
-                    JOptionPane.ERROR_MESSAGE
-            );
+            showValidationError(ex.getMessage() == null
+                    ? I18n.text("validation.generic")
+                    : ex.getMessage());
         }
     }
 
@@ -323,17 +254,17 @@ public final class MainFrame extends JFrame {
 
         return new OptionInput(
                 (OptionType) typeCombo.getSelectedItem(),
-                decimal(currentPriceField.getText()),
-                decimal(strikeField.getText()),
-                decimal(bidField.getText()),
-                decimal(askField.getText()),
-                integer(contractsField.getText(), "Contratti"),
-                integer(multiplierField.getText(), "Moltiplicatore"),
-                decimal(commissionsField.getText()),
+                decimal(currentPriceField.getText(), "field.currentUnderlyingPrice"),
+                decimal(strikeField.getText(), "field.strike"),
+                decimal(bidField.getText(), "field.bid"),
+                decimal(askField.getText(), "field.ask"),
+                integer(contractsField.getText(), "field.contracts"),
+                integer(multiplierField.getText(), "field.multiplier"),
+                decimal(commissionsField.getText(), "field.commissions"),
                 expiration,
-                decimal(minField.getText()),
-                decimal(maxField.getText()),
-                decimal(stepField.getText())
+                decimal(minField.getText(), "field.scenarioMin"),
+                decimal(maxField.getText(), "field.scenarioMax"),
+                decimal(stepField.getText(), "field.scenarioStep")
         );
     }
 
@@ -353,6 +284,86 @@ public final class MainFrame extends JFrame {
         maxField.setText("");
         stepField.setText("");
 
+        lastSummary = null;
+        resetSummaryValues();
+        tableModel.setRows(List.of());
+        scenariosButton.setVisible(false);
+        closeScenarioDialogs();
+        inputPanel.revalidate();
+        inputPanel.repaint();
+        currentPriceField.requestFocusInWindow();
+    }
+
+    private void changeLanguage() {
+        AppLanguage selected = (AppLanguage) languageCombo.getSelectedItem();
+        I18n.setLanguage(selected);
+        updateTexts();
+        tableModel.refreshLanguage();
+        scenarioDialogs.forEach(ScenariosDialog::refreshLanguage);
+    }
+
+    private void updateTexts() {
+        setTitle(I18n.text("app.title"));
+        headerTitle.setText(I18n.text("header.title"));
+        headerSubtitle.setText(I18n.text("header.subtitle"));
+        languageLabel.setText(I18n.text("language.label"));
+
+        inputBorder.setTitle(I18n.text("panel.contractData"));
+        summaryBorder.setTitle(I18n.text("panel.summary"));
+
+        fieldLabels.forEach((key, label) -> label.setText(I18n.text(key)));
+        summaryLabels.forEach((key, label) -> label.setText(I18n.text(key)));
+
+        clearButton.setText(I18n.text("button.clear"));
+        scenariosButton.setText(I18n.text("button.scenarios"));
+        scenariosButton.setToolTipText(I18n.text("button.scenarios.tooltip"));
+        calculateButton.setText(I18n.text("button.calculate"));
+        noteLabel.setText(I18n.text("summary.note"));
+
+        UIManager.put("OptionPane.okButtonText", I18n.text("common.ok"));
+        updateDateEditor();
+        if (lastSummary != null) {
+            renderSummary(lastSummary);
+        }
+
+        inputPanel.revalidate();
+        inputPanel.repaint();
+        summaryPanel.revalidate();
+        summaryPanel.repaint();
+    }
+
+    private void updateDateEditor() {
+        String pattern = I18n.language() == AppLanguage.ENGLISH
+                ? "MM/dd/yyyy"
+                : "dd/MM/yyyy";
+        expirationSpinner.setEditor(new JSpinner.DateEditor(expirationSpinner, pattern));
+    }
+
+    private void showValidationError(String message) {
+        JOptionPane.showMessageDialog(
+                this,
+                message,
+                I18n.text("message.invalidData.title"),
+                JOptionPane.ERROR_MESSAGE
+        );
+    }
+
+
+    private void renderSummary(OptionSummary summary) {
+        unitPremiumValue.setText(formatPrice(summary.unitPremium()));
+        premiumTotalValue.setText(formatMoney(summary.premiumTotal()));
+        totalCostValue.setText(formatMoney(summary.totalCost()));
+        spreadPerShareValue.setText(formatPrice(summary.spreadPerShare()));
+        spreadTotalValue.setText(formatMoney(summary.spreadTotal()));
+        spreadPercentValue.setText(formatPercent(summary.spreadPercent()));
+        breakEvenValue.setText(formatPrice(summary.breakEven()));
+        maxLossValue.setText(formatMoney(summary.maximumLoss()));
+        controlledSharesValue.setText(Integer.toString(summary.controlledShares()));
+        daysValue.setText(Long.toString(summary.daysToExpiration()));
+        movementValue.setText(formatSignedPercent(summary.movementToBreakEvenPercent()));
+    }
+
+    private void resetSummaryValues() {
         unitPremiumValue.setText("—");
         premiumTotalValue.setText("—");
         totalCostValue.setText("—");
@@ -364,17 +375,21 @@ public final class MainFrame extends JFrame {
         controlledSharesValue.setText("—");
         daysValue.setText("—");
         movementValue.setText("—");
-
-        tableModel.setRows(List.of());
-        chartPanel.setScenarios(List.of());
-        currentPriceField.requestFocusInWindow();
     }
 
-    private static void addField(
+    private void closeScenarioDialogs() {
+        List.copyOf(scenarioDialogs).forEach(ScenariosDialog::dispose);
+        scenarioDialogs.clear();
+    }
+
+    private void addField(
             JPanel panel,
             int row,
-            String label,
+            String labelKey,
             java.awt.Component component) {
+
+        JLabel label = new JLabel();
+        fieldLabels.put(labelKey, label);
 
         GridBagConstraints left = new GridBagConstraints();
         left.gridx = 0;
@@ -389,13 +404,14 @@ public final class MainFrame extends JFrame {
         right.fill = GridBagConstraints.HORIZONTAL;
         right.insets = new Insets(4, 4, 4, 4);
 
-        panel.add(new JLabel(label), left);
+        panel.add(label, left);
         panel.add(component, right);
     }
 
-    private static void addSummary(JPanel panel, String label, JLabel value) {
-        JLabel title = new JLabel(label);
+    private void addSummary(JPanel panel, String labelKey, JLabel value) {
+        JLabel title = new JLabel();
         title.setFont(title.getFont().deriveFont(Font.BOLD));
+        summaryLabels.put(labelKey, title);
         panel.add(title);
         panel.add(value);
     }
@@ -406,7 +422,7 @@ public final class MainFrame extends JFrame {
         return label;
     }
 
-    private static BigDecimal decimal(String text) {
+    private static BigDecimal decimal(String text, String fieldKey) {
         try {
             String normalized = text.trim().replace(" ", "");
             if (normalized.isEmpty()) {
@@ -417,36 +433,48 @@ public final class MainFrame extends JFrame {
             }
             return new BigDecimal(normalized);
         } catch (NumberFormatException ex) {
-            throw new IllegalArgumentException("Numero non valido o mancante: " + text);
+            throw new ValidationException(
+                    "validation.number",
+                    I18n.text(fieldKey)
+            );
         }
     }
 
-    private static int integer(String text, String fieldName) {
+    private static int integer(String text, String fieldKey) {
         try {
             return Integer.parseInt(text.trim());
         } catch (NumberFormatException ex) {
-            throw new IllegalArgumentException(fieldName + " deve essere un numero intero");
+            throw new ValidationException(
+                    "validation.integer",
+                    I18n.text(fieldKey)
+            );
         }
     }
 
     private static String formatMoney(BigDecimal value) {
-        return new DecimalFormat("#,##0.00 €").format(value);
+        NumberFormat format = NumberFormat.getCurrencyInstance(I18n.locale());
+        format.setCurrency(java.util.Currency.getInstance("EUR"));
+        format.setMinimumFractionDigits(2);
+        format.setMaximumFractionDigits(2);
+        return format.format(value);
     }
 
     private static String formatPrice(BigDecimal value) {
-        return new DecimalFormat("#,##0.0000 €").format(value);
+        NumberFormat format = NumberFormat.getNumberInstance(I18n.locale());
+        format.setMinimumFractionDigits(4);
+        format.setMaximumFractionDigits(4);
+        return format.format(value) + " €";
     }
 
     private static String formatPercent(BigDecimal value) {
-        DecimalFormat formatter = new DecimalFormat("#,##0.00");
-        String formatted = formatter.format(value.abs());
+        NumberFormat format = NumberFormat.getNumberInstance(I18n.locale());
+        format.setMinimumFractionDigits(2);
+        format.setMaximumFractionDigits(2);
+        return format.format(value) + " %";
+    }
 
-        if (value.signum() > 0) {
-            return "+" + formatted + " %";
-        }
-        if (value.signum() < 0) {
-            return "-" + formatted + " %";
-        }
-        return formatted + " %";
+    private static String formatSignedPercent(BigDecimal value) {
+        String prefix = value.signum() > 0 ? "+" : "";
+        return prefix + formatPercent(value);
     }
 }
