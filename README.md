@@ -7,6 +7,18 @@
 
 ---
 
+## Screenshots
+
+### Main application
+
+![Option Payoff Calculator main window](docs/images/option-payoff-main-window.png)
+
+### Expiration scenarios
+
+![Option Payoff Calculator expiration scenarios](docs/images/option-payoff-scenarios-window.png)
+
+---
+
 A multilingual Java Swing desktop application that simulates the **expiration payoff** of purchased Call and Put options.
 
 The application makes the purchase premium, spread, total cost, break-even point, maximum loss and profit/loss scenarios immediately visible.
